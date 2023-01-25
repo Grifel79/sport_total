@@ -1,2 +1,4 @@
 # ignore build folder
 build
+# ignore MacOs system file
+.DS_Store
