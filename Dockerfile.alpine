@@ -1,0 +1,66 @@
+FROM alpine:latest as build
+
+LABEL description="Build container - sport_total_app"
+
+RUN apk update && apk add --no-cache \ 
+    autoconf build-base binutils cmake curl file gcc g++ git libgcc libtool linux-headers make musl-dev ninja tar unzip wget
+
+RUN apk add --upgrade opencv
+
+RUN cd usr/local \
+    && wget https://download.pytorch.org/libtorch/nightly/cpu/libtorch-shared-with-deps-latest.zip \
+    && unzip libtorch-shared-with-deps-latest.zip
+
+RUN cd usr/local \
+    && wget -O opencv.zip https://github.com/opencv/opencv/archive/4.5.3.zip \
+    && unzip opencv.zip \
+    && mv opencv-4.5.3 opencv \
+    && mkdir -p build && cd build \
+    && cmake ../opencv \
+    -D BUILD_DOCS=OFF \
+    -D BUILD_EXAMPLES=OFF \
+    -D BUILD_opencv_apps=OFF \
+    -D BUILD_opencv_python2=OFF \
+    -D BUILD_opencv_python3=OFF \
+    -D BUILD_PERF_TESTS=OFF \
+    -D BUILD_SHARED_LIBS=OFF \ 
+    -D BUILD_TESTS=OFF \
+    -D CMAKE_BUILD_TYPE=RELEASE \
+    -D ENABLE_PRECOMPILED_HEADERS=OFF \
+    -D FORCE_VTK=OFF \
+    -D WITH_FFMPEG=OFF \
+    -D WITH_GDAL=OFF \ 
+    -D WITH_IPP=OFF \
+    -D WITH_OPENEXR=OFF \
+    -D WITH_OPENGL=OFF \ 
+    -D WITH_QT=OFF \
+    -D WITH_TBB=OFF \ 
+    -D WITH_XINE=OFF \ 
+    -D BUILD_JPEG=ON  \
+    -D BUILD_TIFF=ON \
+    -D BUILD_PNG=ON \
+    && make \
+    && make install
+
+COPY ./src /src
+WORKDIR /src
+RUN mkdir out \
+    && cd out \
+    && cmake -DCMAKE_PREFIX_PATH=/usr/local/libtorch .. \
+    && make
+
+FROM alpine:latest as runtime
+
+LABEL description="Run container - sport_total_app"
+
+RUN apk update && apk add --no-cache \ 
+    libstdc++
+
+RUN mkdir /usr/local/sport_total
+COPY --from=build /src/ResNet50_ImageNet.pt /usr/local/sport_total/ResNet50_ImageNet.pt
+COPY --from=build /src/cat1.jpeg /usr/local/sport_total/cat1.jpeg
+COPY --from=build /src/out/sport_total_app /usr/local/sport_total/sport_total_app
+
+WORKDIR /usr/local/sport_total
+
+CMD ./sport_total_app cat1.jpeg
