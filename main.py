@@ -1,7 +1,7 @@
 import torch
 from torchvision.io import read_image
 from torchvision.models import resnet50, ResNet50_Weights
-
+import json
 
 class MyModule(torch.nn.Module):
     def __init__(self):
@@ -18,7 +18,7 @@ class MyModule(torch.nn.Module):
         return self.model(x)
 
 
-img = read_image("n01729977_green_snake.jpeg")
+img = read_image("./src/snake.jpeg")
 #img = torch.ones(3, 500, 500)
 
 # Step 1: Initialize model with the best available weights
@@ -37,20 +37,13 @@ model.eval()
 
 # # Step 2: Initialize the inference transforms
 preprocess = weights2.transforms()
-#
-# # Step 3: Apply inference preprocessing transforms
-#batch = preprocess(img).unsqueeze(0)
 
+# # Step 3: Apply inference preprocessing transforms
 print(img.shape)
 batch = preprocess(img).unsqueeze(0)
 print(batch.shape)
 #
 # # Step 4: Use the model and print the predicted category
-# prediction = weights(batch).squeeze(0).softmax(0)
-# class_id = prediction.argmax().item()
-# score = prediction[class_id].item()
-# category_name = weights.meta["categories"][class_id]
-# print(f"{category_name}: {100 * score:.1f}%")
 
 prediction = model(batch)
 
@@ -60,6 +53,10 @@ print(class_id)
 # score = prediction[class_id].item()
 
 categories = weights2.meta["categories"]
+categories_json = json.dumps(categories)
+with open("ImageNet_categories.json", "w") as outfile:
+    outfile.write(categories_json)
+
 category_name = categories[class_id]
 print(category_name)
 
@@ -67,13 +64,12 @@ my_module = MyModule()
 output = my_module.forward(img.unsqueeze(0))
 print("my_module.forward(img) = ", output.argmax().item())
 sm = torch.jit.script(my_module)
-sm.save("my_module_model.pt")
-
+sm.save("ResNet50_ImageNet.pt")
 
 print('Python model top 5 results:\n  {}'.format(prediction.topk(5)))
 print('TorchScript model top 5 results:\n  {}'.format(output.topk(5)))
 
+# i don't use tracing because i want to include transforms into the C++ model
 #traced_script_module = torch.jit.trace(model, batch)
 #traced_script_module.save("resnet50-11ad3fa6-cpp.pt")
-#print(f"{category_name}: {100 * score:.1f}%")
 
