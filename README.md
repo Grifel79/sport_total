@@ -2,11 +2,17 @@ This is a repo with C++ app which takes an image as an input and gives it's clas
 
 To build with docker:
 
+////
 docker build -t sport_total .
+/////
 
 To run with docker:
 
+////
 docker run -t sport_total
+////
+
+
 
 For now it uses the image specified in the end of the Dockerfile:
 CMD ./sport_total_app ../snake.jpeg
